@@ -1,6 +1,7 @@
 # Parallel Sum Map-Reduce (Pthreads)
 
 ## Visão Geral
+![Fluxo Map-Reduce](map_reduce_flow.svg)
 Implementação funcional de um algoritmo de soma paralela seguindo o modelo Map-Reduce simplificado utilizando a biblioteca `pthread`. O sistema divide um vetor de inteiros em *chunks* processados de forma independente por threads *worker* e consolidados pela thread principal.
 
 ## Arquitetura e Estrutura de Dados
