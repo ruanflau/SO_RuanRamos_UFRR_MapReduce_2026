@@ -18,8 +18,6 @@ Utiliza `pthread_join` como barreira implícita. A thread principal suspende a e
 ### 3. Fase de REDUCE
 Operação serial que consolida os resultados parciais. A função de redução (`ReduceFn`) garante que a lógica de agregação seja aplicada corretamente sobre os dados processados.
 
-![Fluxo de Processamento Map-Reduce](map_reduce_flow.svg)
-
 ## Funcionalidades e Melhorias
 
 * **Abstração Genérica:** Tipos `MapFn` e `ReduceFn` permitem trocar a lógica de negócio sem alterar o núcleo de concorrência.
