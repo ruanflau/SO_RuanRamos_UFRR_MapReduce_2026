@@ -1,49 +1,91 @@
 # SO_RuanRamos_UFRR_MapReduce_2026
 
 ## Visão Geral
-Este framework implementa o paradigma Map-Reduce em C++ utilizando a biblioteca `pthread` para processamento paralelo de alto desempenho. O sistema foi projetado para escalabilidade, permitindo a execução de operações genéricas sobre grandes volumes de dados com suporte nativo a benchmarking e auto-detecção de hardware.
 
-## Arquitetura do Sistema
+Framework Map-Reduce em C++ com pthreads para processamento paralelo de vetores
+de larga escala. Suporta operações intercambiáveis via ponteiros de função,
+auto-detecção de hardware, validação analítica e benchmarking de speedup.
 
-A execução é dividida em três fases principais, coordenadas por uma estrutura de dados central:
+## Arquitetura
 
-### 1. Fase de Particionamento e MAP
-O vetor de entrada é segmentado em *chunks*. O sistema calcula o tamanho base de cada segmento e distribui o resto da divisão (N % T) integralmente para a última thread, garantindo cobertura total.
-* **Isolamento de Dados:** Cada thread opera exclusivamente em seu sub-vetor via estrutura `ThreadArgs`.
-* **Execução Paralela:** A função de mapeamento (`MapFn`) é injetada dinamicamente, permitindo operações como soma, busca de máximo ou contagens customizadas.
+A execução é dividida em três fases determinísticas:
+
+### 1. Particionamento e MAP
+
+O vetor de N elementos é dividido em T chunks. O tamanho base é `⌊N/T⌋`,
+com o resíduo (`N % T`) absorvido pela última thread, garantindo cobertura total.
+
+- **Isolamento de memória:** cada thread opera exclusivamente em seu sub-vetor
+  via `ThreadArgs` — sem variáveis compartilhadas na fase MAP, sem necessidade
+  de mutex.
+- **Operação genérica:** o tipo `MapFn` permite passar qualquer função de
+  mapeamento (soma, máximo, contagem de pares) sem alterar o motor de
+  concorrência.
 
 ### 2. Barreira de Sincronização
-Utiliza `pthread_join` como barreira implícita. A thread principal suspende a execução até que todos os *workers* tenham depositado os resultados parciais na memória segura (`result`).
 
-### 3. Fase de REDUCE
-Operação serial que consolida os resultados parciais. A função de redução (`ReduceFn`) garante que a lógica de agregação seja aplicada corretamente sobre os dados processados.
+`pthread_join` em loop suspende a thread principal até que todos os workers
+concluam. Só após a barreira os resultados parciais são lidos — garantindo
+ausência de race conditions na fase de redução.
 
-## Funcionalidades e Melhorias
+### 3. REDUCE
 
-* **Abstração Genérica:** Tipos `MapFn` e `ReduceFn` permitem trocar a lógica de negócio sem alterar o núcleo de concorrência.
-* **Gestão Dinâmica de Recursos:**
-    * **Auto-detecção:** Identificação automática de threads lógicas (Linux/Windows) via `sysconf` ou `GetSystemInfo`.
-    * **Controle CLI:** Parâmetros para definir o número de elementos (N) e threads (T).
-* **Módulo de Benchmark:** Executa baterias de testes (média de 5 execuções) e calcula o *speedup* real em relação à execução sequencial.
-* **Validação de Integridade:** Cruza resultados com fórmulas matemáticas analíticas para garantir que nenhum dado foi perdido ou sobreposto.
+Operação serial executada pela thread principal. A função `ReduceFn` itera
+sobre o vetor de `ThreadArgs` acumulando os resultados parciais sobre um valor
+de identidade neutro (`0` para soma, `LLONG_MIN` para máximo).
 
-## Interface de Linha de Comando (CLI)
+## Funcionalidades
 
-| Flag | Descrição | Padrão |
-| :--- | :--- | :--- |
-| `-n <N>` | Número total de elementos no vetor | 1.000.000 |
-| `-t <T>` | Quantidade fixa de threads | Hardware threads |
-| `-auto` | Utiliza a capacidade máxima de hardware | Ativo |
-| `-bench` | Executa análise de speedup (1 a T_max) | Desativado |
+- **Ponteiros de função (`MapFn` / `ReduceFn`):** troca a lógica de negócio
+  sem modificar a infraestrutura paralela.
+- **Auto-detecção de hardware:** `sysconf(_SC_NPROCESSORS_ONLN)` no Linux e
+  `GetSystemInfo` no Windows — usado como padrão quando `-t` não é informado.
+- **Módulo de benchmark:** média de 5 execuções por valor de T, com cálculo
+  de speedup relativo ao caso single-thread.
+- **Validação analítica:** resultados cruzados com fórmulas fechadas O(1),
+  independentes da implementação testada.
+
+| Operação       | Fórmula de validação |
+| :------------- | :------------------- |
+| Soma total     | S = N·(N+1)/2        |
+| Máximo         | M = N                |
+| Contar pares   | C = ⌊N/2⌋            |
+
+## Interface de Linha de Comando
+
+| Flag       | Descrição                              | Padrão           |
+| :--------- | :------------------------------------- | :--------------- |
+| `-n <N>`   | Número de elementos no vetor           | 1.000.000        |
+| `-t <T>`   | Número de threads                      | Auto (hardware)  |
+| `-auto`    | Usa todas as threads lógicas           | Ativado          |
+| `-bench`   | Executa benchmark de speedup (1..hw)   | Desativado       |
 
 ## Compilação e Execução
 
 ```bash
-# Compilação otimizada
+# Compilação
 g++ -O2 -pthread Algoritmo_MapReduce.cpp -o map_reduce
 
-# Execução com 5M elementos e 8 threads
+# Execução padrão (auto-detecta threads)
+./map_reduce
+
+# 5M elementos, 8 threads
 ./map_reduce -n 5000000 -t 8
 
+# Benchmark completo
+./map_reduce -bench
+```
+
+## Saída Esperada
+
+```
+N=1000000  T=12  (hardware: 12 threads)
+
+Operacao         Resultado      Esperado       Status
+-------------------------------------------------------
+Soma total       500000500000   500000500000   [OK]
+Maximo           1000000        1000000        [OK]
+Contar pares     500000         500000         [OK]
+```
 # Modo Benchmark
 ./map_reduce -bench
