@@ -4,7 +4,7 @@
 Evolução do protótipo de soma paralela (WIP) para um framework completo, genérico e parametrizável via linha de comando. A arquitetura foi refatorada para dissociar a lógica de concorrência e particionamento da lógica de negócios, permitindo a execução de múltiplas operações matemáticas utilizando a mesma infraestrutura de threads.
 
 ## Arquitetura e Injeção de Dependências
-
+![Fluxo Map-Reduce](flowchart_map_reduce_internals.svg)
 O núcleo do algoritmo agora suporta tipagem genérica para as operações através de ponteiros de função:
 
 * `MapFn`: Assinatura para funções de mapeamento (`long long (*)(const int*, int)`).
@@ -34,7 +34,6 @@ A estrutura de comunicação (`ThreadArgs`) foi expandida para carregar o pontei
 4. **Consolidação (REDUCE):** Aplicação sequencial da `reduce_fn` sobre os resultados parciais, partindo do valor identidade.
 
 ## Validação e Corretude Expandida
-![Fluxo Map-Reduce](flowchart_map_reduce_internals.svg)
 O pipeline valida a corretude estrutural cruzando o resultado do Map-Reduce com fórmulas matemáticas fechadas, gerando um *status* de integridade `[OK]` ou `[ERRO]`:
 
 * **Soma Total:** $S = \frac{N(N+1)}{2}$
