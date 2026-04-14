@@ -27,14 +27,14 @@ A estrutura de comunicação (`ThreadArgs`) foi expandida para carregar o pontei
 4. **Módulo de Benchmark:** Sistema integrado de medição de tempo e cálculo de *speedup*. Realiza média móvel de 5 execuções para mitigar ruído térmico/escalonamento de SO ao comparar execuções de $1$ até $T_{max}$ threads.
 
 ## Fluxo de Execução Genérico
-
+![Fluxo Map-Reduce](flowchart_main.svg)
 1. **Instanciação:** `map_reduce` recebe o vetor, número de threads, funções e a identidade matemática da operação (ex: `0` para soma, `LLONG_MIN` para máximo).
 2. **Distribuição (MAP):** Os *chunks* são calculados (com tratamento do `remainder`) e as threads são criadas passando o envelope que agora contém `map_fn`.
 3. **Sincronização:** Barreira implícita aguardando as chamadas de `pthread_join`.
 4. **Consolidação (REDUCE):** Aplicação sequencial da `reduce_fn` sobre os resultados parciais, partindo do valor identidade.
 
 ## Validação e Corretude Expandida
-
+![Fluxo Map-Reduce](flowchart_map_reduce_internals.svg)
 O pipeline valida a corretude estrutural cruzando o resultado do Map-Reduce com fórmulas matemáticas fechadas, gerando um *status* de integridade `[OK]` ou `[ERRO]`:
 
 * **Soma Total:** $S = \frac{N(N+1)}{2}$
